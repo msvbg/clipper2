@@ -3,6 +3,8 @@ use clipper2c_sys::{
     clipper_path64_of_points, clipper_path64_simplify, clipper_path64_size, ClipperPath64,
     ClipperPoint64,
 };
+#[cfg(feature = "geo-types")]
+use geo::LineString;
 
 use crate::{
     inflate, malloc, point_in_polygon, Bounds, Centi, EndType, JoinType, Point,
@@ -321,6 +323,26 @@ impl<P: PointScaler> From<Vec<(f64, f64)>> for Path<P> {
 impl<P: PointScaler> From<Vec<[f64; 2]>> for Path<P> {
     fn from(points: Vec<[f64; 2]>) -> Self {
         Path::<P>::new(points.iter().map(Point::<P>::from).collect())
+    }
+}
+
+#[cfg(feature = "geo-types")]
+impl<P: PointScaler> From<LineString<f64>> for Path<P> {
+    fn from(line_string: LineString<f64>) -> Self {
+        Path::<P>::new(line_string.points().map(Point::<P>::from).collect())
+    }
+}
+
+#[cfg(feature = "geo-types")]
+impl<P: PointScaler> From<Path<P>> for LineString<f64> {
+    fn from(value: Path<P>) -> Self {
+        LineString::<f64>::from(
+            value
+                .0
+                .into_iter()
+                .map(|p| (p.x(), p.y()))
+                .collect::<Vec<_>>(),
+        )
     }
 }
 

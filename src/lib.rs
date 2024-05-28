@@ -67,17 +67,19 @@ mod bounds;
 mod clipper;
 mod operations;
 mod options;
+
 mod path;
 mod paths;
 mod point;
+
+pub use path::*;
+pub use paths::*;
+pub use point::*;
 
 pub use crate::bounds::*;
 pub use crate::clipper::*;
 pub use crate::operations::*;
 pub use crate::options::*;
-pub use crate::path::*;
-pub use crate::paths::*;
-pub use crate::point::*;
 
 pub(crate) unsafe fn malloc(size: usize) -> *mut std::os::raw::c_void {
     libc::malloc(size)

@@ -14,11 +14,15 @@ categories = ["algorithms"]
 [features]
 default = ["doc-images"]
 doc-images = []
+geo-types = ["dep:geo", "dep:geo-types"]
 
 [dependencies]
 libc = "0.2"
 clipper2c-sys = "0.1.0"
 thiserror = "1.0.59"
+
+geo = { version = "0.28", optional = true }
+geo-types = { version = "0.7", optional = true }
 
 [dev-dependencies]
 macroquad = "0.4.5"

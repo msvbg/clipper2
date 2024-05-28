@@ -1,12 +1,11 @@
+use crate::{
+    inflate, malloc, simplify, Bounds, Centi, Clipper, EndType, JoinType, Path, Point, PointScaler,
+    WithSubjects,
+};
 use clipper2c_sys::{
     clipper_delete_path64, clipper_paths64_get_point, clipper_paths64_length,
     clipper_paths64_of_paths, clipper_paths64_path_length, clipper_paths64_size, ClipperPath64,
     ClipperPaths64,
-};
-
-use crate::{
-    inflate, malloc, simplify, Bounds, Centi, Clipper, EndType, JoinType, Path, Point, PointScaler,
-    WithSubjects,
 };
 
 /// A collection of paths.
@@ -267,6 +266,15 @@ impl<'a, P: PointScaler> Iterator for PathsIterator<'a, P> {
     }
 }
 
+impl<P: PointScaler> IntoIterator for Paths<P> {
+    type Item = Path<P>;
+    type IntoIter = std::vec::IntoIter<Path<P>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 impl<P: PointScaler> From<Path<P>> for Paths<P> {
     fn from(path: Path<P>) -> Self {
         vec![path].into()
@@ -339,6 +347,44 @@ impl<P: PointScaler> From<Vec<Path<P>>> for Paths<P> {
     }
 }
 
+#[cfg(feature = "geo-types")]
+impl<P: PointScaler> From<geo::MultiPolygon<f64>> for Paths<P> {
+    fn from(multi_polygon: geo::MultiPolygon<f64>) -> Self {
+        use geo::LinesIter;
+        let multi_line_string: geo::MultiLineString<f64> = multi_polygon.lines_iter().collect();
+        Paths::<P>::new(multi_line_string.0.into_iter().map(Into::into).collect())
+    }
+}
+
+#[cfg(feature = "geo-types")]
+impl<P: PointScaler> TryFrom<Paths<P>> for geo::MultiPolygon<f64> {
+    type Error = geo_types::Error;
+
+    fn try_from(paths: Paths<P>) -> Result<Self, Self::Error> {
+        geo::MultiPolygon::<f64>::try_from(geo::Geometry::MultiLineString(
+            paths.into_iter().collect(),
+        ))
+    }
+}
+
+#[cfg(feature = "geo-types")]
+impl<P: PointScaler> From<geo::Polygon<f64>> for Paths<P> {
+    fn from(polygon: geo::Polygon<f64>) -> Self {
+        use geo::LinesIter;
+        let multi_line_string: geo::MultiLineString<f64> = polygon.lines_iter().collect();
+        Paths::<P>::new(multi_line_string.0.into_iter().map(Into::into).collect())
+    }
+}
+
+#[cfg(feature = "geo-types")]
+impl<P: PointScaler> TryFrom<Paths<P>> for geo::Polygon<f64> {
+    type Error = geo_types::Error;
+
+    fn try_from(paths: Paths<P>) -> Result<Self, Self::Error> {
+        geo::Polygon::<f64>::try_from(paths.into_iter().collect())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -378,5 +424,25 @@ mod test {
         assert_eq!(point1.y_scaled(), 600);
         assert_eq!(point2.x_scaled(), 1000);
         assert_eq!(point2.y_scaled(), 2000);
+    }
+}
+
+#[cfg(all(test, feature = "geo-types"))]
+mod geo_tests {
+    #[test]
+    fn test_geo_types() {
+        use super::*;
+        use geo::MultiPolygon;
+
+        let paths = Paths::<Centi>::from(vec![(0.4, 0.0), (5.0, 1.0)]);
+        let multi_polygon: MultiPolygon<f64> =
+            MultiPolygon::<f64>::try_from(paths.clone()).unwrap();
+        let converted: Paths<Centi> = multi_polygon.try_into().unwrap();
+        for (path, converted_path) in paths.iter().zip(converted.iter()) {
+            for (path_point, converted_point) in path.iter().zip(converted_path.iter()) {
+                assert_eq!(path_point.x(), converted_point.x());
+                assert_eq!(path_point.y(), converted_point.y());
+            }
+        }
     }
 }

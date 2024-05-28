@@ -211,6 +211,20 @@ impl<P: PointScaler> PartialEq for Point<P> {
     }
 }
 
+#[cfg(feature = "geo-types")]
+impl<P: PointScaler> From<geo::Point<f64>> for Point<P> {
+    fn from(geo::Point(p): geo::Point<f64>) -> Self {
+        Self::new(p.x, p.y)
+    }
+}
+
+#[cfg(feature = "geo-types")]
+impl<P: PointScaler> From<Point<P>> for geo::Point<f64> {
+    fn from(p: Point<P>) -> Self {
+        geo::Point::<f64>::new(p.x(), p.y())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
